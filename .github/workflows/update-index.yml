@@ -1,29 +1,34 @@
-name: Update index.html
+name: Automatyczna aktualizacja index.html
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]  # lub inny branch, jeśli publikujesz inną gałąź
 
 jobs:
-  update-index:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Pobranie repozytorium
-        uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Instalacja Pythona
-        uses: actions/setup-python@v4
+      - name: Ustaw Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Uruchomienie skryptu
-        run: python generate_index.py
-
-      - name: Commit zmian
+      - name: Zainstaluj zależności (jeśli potrzebne)
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
+          pip install -r requirements.txt || true
+
+      - name: Wygeneruj zaktualizowany index.html
+        run: |
+          python generate_index.py
+
+      - name: Commit i push zmian
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git commit -m "Automatyczna aktualizacja index.html" || echo "Brak zmian do commitowania"
+          git commit -m "Automatyczna aktualizacja index.html [bot]" || echo "Brak zmian do commitowania"
           git push
+          
