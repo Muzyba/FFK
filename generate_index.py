@@ -1,33 +1,30 @@
-import os
+name: Generate index.html
 
-# Katalog, z którego pobieramy pliki (np. bieżący katalog repozytorium)
-directory = "."
+on:
+  push:
+    branches:
+      - main  # Lub inna twoja gałąź
 
-# Plik, który generujemy
-index_file = "index.html"
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-# Pobieramy listę plików, ignorując samego siebie i katalogi
-files = [f for f in os.listdir(directory) if os.path.isfile(f) and f != index_file]
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-# Tworzymy zawartość HTML
-html_content = f"""<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista plików</title>
-</head>
-<body>
-    <h1>Lista plików w repozytorium</h1>
-    <ul>
-        {''.join(f'<li><a href="{file}">{file}</a></li>' for file in files)}
-    </ul>
-</body>
-</html>
-"""
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
 
-# Zapisujemy plik
-with open(index_file, "w", encoding="utf-8") as f:
-    f.write(html_content)
+    - name: Run generate_index.py
+      run: python generate_index.py
 
-print(f"Plik {index_file} został wygenerowany.")
+    - name: Commit and push changes
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git add index.html
+        git commit -m "Auto-update index.html" || echo "No changes to commit"
+        git push
