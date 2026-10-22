@@ -1,34 +1,40 @@
-name: Automatyczna aktualizacja index.html
+name: Publikuj FFK
 
 on:
   push:
-    branches: [ main ]  # lub inny branch, jeśli publikujesz inną gałąź
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ffk-pages
+  cancel-in-progress: false
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout repo
+      - name: Pobierz pliki repozytorium
         uses: actions/checkout@v4
-
       - name: Ustaw Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-
-      - name: Zainstaluj zależności (jeśli potrzebne)
-        run: |
-          pip install -r requirements.txt || true
-
-      - name: Wygeneruj zaktualizowany index.html
-        run: |
-          python generate_index.py
-
-      - name: Commit i push zmian
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git commit -m "Automatyczna aktualizacja index.html [bot]" || echo "Brak zmian do commitowania"
-          git push
-          
+      - name: Zbuduj liste plikow dla Kodi
+        run: python generate_index.py
+      - name: Skonfiguruj GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Przygotuj pliki strony
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Opublikuj strone FFK
+        id: deployment
+        uses: actions/deploy-pages@v4
