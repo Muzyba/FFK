@@ -1,30 +1,41 @@
-name: Generate index.html
+#!/usr/bin/env python3
+"""Generate Kodi-readable static download listing for FFK on GitHub Pages."""
 
-on:
-  push:
-    branches:
-      - main  # Lub inna twoja gałąź
+from html import escape
+from pathlib import Path
+from urllib.parse import quote
+import shutil
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+root = Path(__file__).resolve().parent
+site = root / "_site"
 
-    steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+if site.exists():
+    shutil.rmtree(site)
+site.mkdir()
+(site / ".nojekyll").touch()
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
+# Include all Kodi ZIP archives and TXT files (especially FF_Json.txt).
+files = sorted(
+    (
+        entry
+        for entry in root.iterdir()
+        if entry.is_file()
+        and entry.suffix.lower() in {".zip", ".txt"}
+    ),
+    key=lambda entry: entry.name.casefold(),
+)
 
-    - name: Run generate_index.py
-      run: python generate_index.py
-
-    - name: Commit and push changes
-      run: |
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
-        git add index.html
-        git commit -m "Auto-update index.html" || echo "No changes to commit"
-        git push
+lines = [
+    "<!DOCTYPE html>",
+    '<html lang="pl">',
+    '<head><meta charset="utf-8"><title>FFK - FanFilm Kodi Addons</title></head>',
+    "<body>",
+]
+for entry in files:
+    shutil.copy2(entry, site / entry.name)
+    label = escape(entry.name)
+    href = quote(entry.name, safe="")
+    lines.append(f'<a href="{href}">{label}</a><br>')
+lines.extend(["</body>", "</html>"])
+(site / "index.html").write_text("\n".join(lines) + "\n", encoding="utf-8")
+print(f"FFK: generated {len(files)} links in _site/index.html")
